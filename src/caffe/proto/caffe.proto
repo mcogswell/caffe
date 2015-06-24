@@ -748,6 +748,12 @@ message ReLUParameter {
     CUDNN = 2;
   }
   optional Engine engine = 2 [default = DEFAULT];
+  enum BackpropType {
+    NORMAL = 0;
+    DECONV = 1;
+    GUIDED = 2;
+  }
+  optional BackpropType backprop_type = 3 [default = NORMAL];
 }
 
 message ReshapeParameter {

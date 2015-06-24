@@ -29,9 +29,25 @@ void ReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
     const int count = bottom[0]->count();
     Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
-    for (int i = 0; i < count; ++i) {
-      bottom_diff[i] = top_diff[i] * ((bottom_data[i] > 0)
-          + negative_slope * (bottom_data[i] <= 0));
+    switch (this->layer_param_.relu_param().backprop_type()) {
+    case ReLUParameter_BackpropType_NORMAL:
+        for (int i = 0; i < count; ++i) {
+          bottom_diff[i] = top_diff[i] * ((bottom_data[i] > 0)
+              + negative_slope * (bottom_data[i] <= 0));
+        }
+        break;
+    case ReLUParameter_BackpropType_DECONV:
+        for (int i = 0; i < count; ++i) {
+          bottom_diff[i] = top_diff[i] * ((top_diff[i] > 0)
+              + negative_slope * (top_diff[i] <= 0));
+        }
+        break;
+    case ReLUParameter_BackpropType_GUIDED:
+        for (int i = 0; i < count; ++i) {
+          bottom_diff[i] = top_diff[i] * ((bottom_data[i] > 0) * (top_diff[i] > 0)
+              + negative_slope * (bottom_data[i] > 0) * (top_diff[i] <= 0));
+        }
+        break;
     }
   }
 }
