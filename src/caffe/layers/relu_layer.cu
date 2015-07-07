@@ -42,6 +42,24 @@ __global__ void ReLUBackward(const int n, const Dtype* in_diff,
 }
 
 template <typename Dtype>
+__global__ void ReLUBackwardDeconv(const int n, const Dtype* in_diff,
+    const Dtype* in_data, Dtype* out_diff, Dtype negative_slope) {
+  CUDA_KERNEL_LOOP(index, n) {
+    out_diff[index] = in_diff[index] * ((in_diff[index] > 0)
+        + (in_diff[index] <= 0) * negative_slope);
+  }
+}
+
+template <typename Dtype>
+__global__ void ReLUBackwardGuided(const int n, const Dtype* in_diff,
+    const Dtype* in_data, Dtype* out_diff, Dtype negative_slope) {
+  CUDA_KERNEL_LOOP(index, n) {
+    out_diff[index] = in_diff[index] * ((in_data[index] > 0) * (in_diff[index] > 0)
+        + (in_data[index] > 0) * (in_diff[index] <= 0) * negative_slope);
+  }
+}
+
+template <typename Dtype>
 void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
@@ -51,10 +69,26 @@ void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
     const int count = bottom[0]->count();
     Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
-    // NOLINT_NEXT_LINE(whitespace/operators)
-    ReLUBackward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
-        count, top_diff, bottom_data, bottom_diff, negative_slope);
-    CUDA_POST_KERNEL_CHECK;
+    switch (this->layer_param_.relu_param().backprop_type()) {
+    case ReLUParameter_BackpropType_NORMAL:
+        // NOLINT_NEXT_LINE(whitespace/operators)
+        ReLUBackward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
+            count, top_diff, bottom_data, bottom_diff, negative_slope);
+        CUDA_POST_KERNEL_CHECK;
+        break;
+    case ReLUParameter_BackpropType_DECONV:
+        // NOLINT_NEXT_LINE(whitespace/operators)
+        ReLUBackwardDeconv<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
+            count, top_diff, bottom_data, bottom_diff, negative_slope);
+        CUDA_POST_KERNEL_CHECK;
+        break;
+    case ReLUParameter_BackpropType_GUIDED:
+        // NOLINT_NEXT_LINE(whitespace/operators)
+        ReLUBackwardGuided<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
+            count, top_diff, bottom_data, bottom_diff, negative_slope);
+        CUDA_POST_KERNEL_CHECK;
+        break;
+    }
   }
 }
 
