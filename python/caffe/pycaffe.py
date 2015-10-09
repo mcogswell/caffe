@@ -125,10 +125,9 @@ def _Net_backward(self, diffs=None, start=None, end=None, **kwargs):
 
     if end is not None:
         end_ind = list(self._layer_names).index(end)
-        outputs = set([end] + diffs)
     else:
         end_ind = 0
-        outputs = set(self.inputs + diffs)
+    outputs = set(diffs)
 
     if kwargs:
         if set(kwargs.keys()) != set(self.outputs):
