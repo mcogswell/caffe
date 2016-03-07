@@ -752,6 +752,7 @@ message ReLUParameter {
     NORMAL = 0;
     DECONV = 1;
     GUIDED = 2;
+    GUIDED_NEG = 3;
   }
   optional BackpropType backprop_type = 3 [default = NORMAL];
 }
